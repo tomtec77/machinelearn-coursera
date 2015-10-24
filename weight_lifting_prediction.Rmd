@@ -1,0 +1,53 @@
+---
+title: "Predicting proficiency in weight lifting"
+author: "Tomás E. Tecce"
+output:
+  html_document:
+    theme: flatly
+    highlights: pygments
+---
+
+# Source data
+
+The data set for this project comes from
+http://groupware.les.inf.puc-rio.br/har.  It consists of data from
+accelerometers on the belt, forearm, arm, and dumbell of 6 participants,
+who were asked to perform barbell lifts correctly and incorrectly in 5
+different ways. First, I downloaded the training data set and load it into
+R as a data frame.
+
+```{r}
+if (!file.exists("data")) { dir.create("data") }
+if (!file.exists("data/pml-training.csv")) {
+  fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(fileUrl, destfile="data/pml-training.csv", method="curl")
+}
+
+dftrain <- read.table("data/pml-training.csv", sep=",",
+                      stringsAsFactors=FALSE, header=TRUE,
+                      na.strings=c("","NA"))
+```
+
+# Feature selection
+
+The training data set consists of `r dim(dftrain)[1]` observations of
+`r dim(dftrain)[2]` variables. I start by checking for missing data.
+
+```{r, echo=FALSE}
+na_check <- as.data.frame(sapply(dftrain, function(x) { sum(is.na(x)) }))
+```
+
+Counting the number of NA values in each column I find that the data has
+either columns with no missing data, or mostly empty columns (all with the
+same value of `r max(100*na_check/dim(dftrain)[1])` per cent of NAs). I 
+discard the latter columns from the training set, and also columns 1
+through 7 which only contain data labels and time stamps.
+
+```{r}
+library(plyr)
+library(dplyr)
+
+features.list <- rownames(na_check)[na_check==0][-(1:7)]
+dtrain <- select(dtrain, features.list)
+```
+
