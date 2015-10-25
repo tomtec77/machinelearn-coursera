@@ -3,9 +3,12 @@ title: "Predicting proficiency in weight lifting"
 author: "Tomás E. Tecce"
 output:
   html_document:
+    toc: true
     theme: flatly
     highlights: pygments
 ---
+
+# Summary
 
 # Source data
 
@@ -105,9 +108,44 @@ components, a significant reduction in the number of features.
 
 # Model construction
 
-To construct my predictive model I have chosen the random forest method. 
+To construct my predictive model I have chosen the random forest method.
 
-```{r}
+In order to avoid memory allocation errors in my machine, I had to
+restrict the size of my training sets to less than 7,000 observations. I
+also had to limit myself to building relatively small forests (250 trees)
+because larger forests take too long to compute.
 
+```{r modelbuild, message=FALSE, cache=TRUE}
+dftrainpca$classe <- dftrain1$classe
+dfcalpca$classe <- dfcal1$classe
+
+smallTrain <- createDataPartition(y=dftrainpca$classe, p=0.55, list=FALSE)
+dftrain2 <- dftrainpca[smallTrain,]
+my.model <- train(classe ~ ., data=dftrain2, method="rf", ntree=250,
+                  trControl=trainControl(method="cv", number=4), prox=TRUE)
+my.model$finalModel
 ```
 
+By training the model with cross validation, I obtain an estimate for the
+out of box (OOB) error, 5.87% in this case. Even with the restrictions I
+had to impose due to my machine's performance, I obtain a very accurate
+model (OOB at least).
+
+# Model validation
+
+I now apply the trained model on the calibration set, using the `predict`
+function. For consistency, I only use a partition of the calibration data
+(the same proportion I used to create the smaller training set), although
+this is probably not necessary. The output of the `confusionMatrix`
+function shows how well the model classified the calibration data,
+together with several accuracy measures.
+
+```{r}
+smallCal <- createDataPartition(y=dfcalpca$classe, p=0.55, list=FALSE)
+dfcal2 <- dfcalpca[smallCal,]
+confusionMatrix(dfcal2$class, predict(my.model, newdata=dfcal2))
+```
+
+The out of sample (OOS) error for this model is estimated from this as 1
+minus the accuracy, so in this case I get that the OOS error for the model
+built is at least 5.53 per cent.
