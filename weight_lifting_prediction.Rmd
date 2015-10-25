@@ -44,10 +44,70 @@ discard the latter columns from the training set, and also columns 1
 through 7 which only contain data labels and time stamps.
 
 ```{r}
-library(plyr)
-library(dplyr)
-
 features.list <- rownames(na_check)[na_check==0][-(1:7)]
-dtrain <- select(dtrain, features.list)
+dftrain <- dftrain[,features.list]
+```
+
+I'm left with 52 features and one outcome variable (`classe`). All the
+features are numeric, and the outcome is of class character with five
+possible values ("A", "B", "C", "D" and "E"). At this point I split the
+original training data into training and calibration datasets.
+
+```{r}
+library(caret)
+
+set.seed(59433)
+trainset <- createDataPartition(y=dftrain$classe, p=0.6, list=FALSE)
+dftrain1 <- dftrain[trainset,]
+dfcal1   <- dftrain[-trainset,]
+```
+
+The next step is to check for correlation among these features. The
+motions performed during exercising are not completely independent of each
+other, and in principle it is possible for the measurements in the
+different accelerometers to be correlated when performing the barbell lift
+in a certain way. The correlation test is performed on the training subset
+only.
+
+```{r}
+corr_test <- cor(dftrain1[,-53])
+
+library(corrplot)
+corrplot(corr_test, method="square", order="FPC",
+         tl.col="black", tl.srt=45, tl.cex=0.5)
+```
+
+The correlation plot above shows that there are indeed several features
+with a strong degree of correlation with others. For example, `roll_belt`
+is strongly correlated with `yaw_belt`, `total_accel_belt` and
+`accel_belt_y` (correlation larger than 0.75):
+
+```{r}
+corr_test[1,][corr_test[1,]>0.75]
+```
+
+When this happens a useful strategy is to preprocess the data with
+principal component analysis (PCA) to reduce the number of predictors,
+generating weighted combinations of features which capture the most
+information possible. Once the principal components are determined from
+the training subset, they are applied to the calibration set too.
+
+```{r, message=FALSE}
+trainpca <- preProcess(dftrain1[,-53], method="pca")
+dftrainpca <- predict(trainpca, dftrain1[,-53])
+dfcalpca <- predict(trainpca, dfcal1[,-53])
+```
+
+I have selected the default threshold of 95 per cent for the cumulative
+percent of variance to be retained by the PCA. That choice yields 25 PCA
+components, a significant reduction in the number of features.
+
+
+# Model construction
+
+To construct my predictive model I have chosen the random forest method. 
+
+```{r}
+
 ```
 
