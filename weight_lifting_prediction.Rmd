@@ -1,5 +1,5 @@
 ---
-title: "Predicting proficiency in weight lifting"
+title: "Using accelerometer data to predict proficiency in weight lifting"
 author: "Tomás E. Tecce"
 output:
   html_document:
@@ -10,7 +10,23 @@ output:
 
 # Summary
 
+In this project I use accelerometer data collected from several users
+doing barbell lifts in different ways to build a predictive model which
+identifies how the exercise is being done. The original data includes 159
+variables. By eliminating columns which mostly consist of empty values,
+and then using principal component analysis, I obtain 25 features which
+are then used to build a random forest model. The model obtained,
+evaluated on a sample separated for calibration from the training set, has
+an out of sample error of at least 5.53 per cent.
+
+
 # Source data
+
+Devices such as Jawbone Up, Nike FuelBand, and Fitbit allow users to
+easily collect large amounts of data about their personal fitness
+activities. The data can be used not only to quantify how much of a
+particular activity the users do, but also to determine how well the
+exercise is done.
 
 The data set for this project comes from
 http://groupware.les.inf.puc-rio.br/har.  It consists of data from
@@ -72,7 +88,7 @@ different accelerometers to be correlated when performing the barbell lift
 in a certain way. The correlation test is performed on the training subset
 only.
 
-```{r}
+```{r correlationtest}
 corr_test <- cor(dftrain1[,-53])
 
 library(corrplot)
@@ -149,3 +165,58 @@ confusionMatrix(dfcal2$class, predict(my.model, newdata=dfcal2))
 The out of sample (OOS) error for this model is estimated from this as 1
 minus the accuracy, so in this case I get that the OOS error for the model
 built is at least 5.53 per cent.
+
+# Predicting on the test set
+
+The final step is to download the test data and use the model on it to
+make predictions. 
+
+```{r}
+if (!file.exists("data/pml-testing.csv")) {
+  fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(fileUrl, destfile="data/pml-testing.csv", method="curl")
+}
+
+dftest <- read.table("data/pml-testing.csv", sep=",",
+                     stringsAsFactors=FALSE, header=TRUE,
+                      na.strings=c("","NA"))
+dim(dftest)
+
+dftest <- dftest[,c(features.list[-53],"problem_id")]
+dftestpca <- predict(trainpca, dftest[,-53])
+dftestpca$classe <- dftest$classe
+
+final.prediction <- predict(my.model, newdata=dftestpca)
+```
+
+To complete the assignment I have to create individual text files for each
+prediction.
+
+```{r}
+pml_write_files <- function(x, outpath="./") {
+  n <- length(x)
+  for (i in 1:n) {
+    filename <- paste0(outpath, "problem_id_", i, ".txt")
+    write.table(x[i], file=filename, quote=FALSE, row.names=FALSE,
+                col.names=FALSE)
+  }
+}
+
+if (!file.exists("output")) { dir.create("output") }
+pml_write_files(as.character(final.prediction), outpath="output/")
+```
+
+# Conclusion
+
+In this project I created a model to predict the type of physical exercise
+based on accelerometer data. The final score obtained on the test data was
+17 correct guesses out of 20 cases, 85 per cent accuracy. Here we see that
+the actual model error is larger than the estimated OOS error, but still
+much better than random guesses.
+
+Random forest models are very accurate, but take a long time to train. In
+this case, because of the limited performance of my machine I had to
+restrict myself to train in a smaller sample and with a relatively small
+forest of only 250 trees. Nevertheless, the final results were very
+accurate; with more time and/or computing power, I am confident that the
+model accuracy can be increased.
