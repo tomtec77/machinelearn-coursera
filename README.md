@@ -33,5 +33,7 @@ this file will download the data files if it does not find them in a
 subdirectory called 'data/' in the working directory. The model
 predictions on the test data set will be stored in text files in a
 subdirectory called 'output/' which will be created if it does not exist.
-- `weight_lifting_prediction.html`: compiled HTML page.
+- `weight_lifting_prediction.html`: compiled HTML page. This project has a
+`gh-pages` branch so you can access the page directly at this URL:
+http://tomtec77.github.io/machinelearn-coursera/weight_lifting_prediction.html.
 - README.md: this file.
